@@ -31,12 +31,26 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     fn genesis() -> Self {
-        todo!("Exercise 1")
+        let new_genesis_header = Header {
+            parent: 0,
+            height: 0,
+            extrinsic: 0,
+            state: 0,
+            consensus_digest: (),
+        };
+        new_genesis_header
     }
 
     /// Create and return a valid child header.
     fn child(&self, extrinsic: u64) -> Self {
-        todo!("Exercise 2")
+        let new_child_header = Header {
+            parent: hash(self),
+            height: self.height + 1,
+            extrinsic,
+            state: self.state + extrinsic,
+            consensus_digest: (),
+        };
+        new_child_header
     }
 
     /// Verify that all the given headers form a valid chain from this header to the tip.
@@ -48,7 +62,27 @@ impl Header {
     /// So in order for a block to verify, we must have that relationship between the extrinsic,
     /// the previous state, and the current state.
     fn verify_sub_chain(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 3")
+        let mut prev_hash = hash(self);
+        let mut prev_height = self.height;
+        let mut prev_state = self.state;
+
+        for header in chain {
+            if header.parent != prev_hash {
+                return false;
+            }
+            if header.height != prev_height + 1 {
+                return false;
+            }
+            if header.state != prev_state + header.extrinsic {
+                return false;
+            }
+
+            prev_hash = hash(header);
+            prev_height = header.height;
+            prev_state = header.state;
+        }
+
+        true
     }
 }
 
@@ -56,7 +90,14 @@ impl Header {
 
 /// Build and return a valid chain with the given number of blocks.
 fn build_valid_chain(n: u64) -> Vec<Header> {
-    todo!("Exercise 4")
+    let mut chain = Vec::new();
+    let mut g = Header::genesis();
+    chain.push(g.clone());
+    for i in 0..n {
+        g = g.child(i);
+        chain.push(g.clone());
+    }
+    chain
 }
 
 /// Build and return a chain with at least three headers.
@@ -70,7 +111,19 @@ fn build_valid_chain(n: u64) -> Vec<Header> {
 /// For this function, ONLY USE the the `genesis()` and `child()` methods to create blocks.
 /// The exercise is still possible.
 fn build_an_invalid_chain() -> Vec<Header> {
-    todo!("Exercise 5")
+    let mut chain = Vec::new();
+    let mut g = Header::genesis();
+    chain.push(g.clone());
+    for _ in 0..2 {
+        g = g.child(1);
+        chain.push(g.clone());
+    }
+    // Introducing an invalid header by modifying the parent hash or height
+    let mut invalid_header = chain.last().unwrap().child(1);
+    invalid_header.parent = 0;
+    chain.push(invalid_header);
+
+    chain
 }
 
 /// Build and return two header chains.
@@ -84,12 +137,58 @@ fn build_an_invalid_chain() -> Vec<Header> {
 ///            \-- 3'-- 4'
 ///
 /// Side question: What is the fewest number of headers you could create to achieve this goal.
+/// 
+/// Side answer: To achieve the goal of creating two valid chains that diverge from the same genesis block, 
+/// five headers are necessary to ensure both chains have the required structure and validity.
+/// 
+// 
+
+// fn build_forked_chain() -> (Vec<Header>, Vec<Header>) {
+//     let mut chain1 = Vec::new();
+//     let mut chain2 = Vec::new();
+//     let mut g = Header::genesis();
+//     chain1.push(g.clone());
+//     chain2.push(g.clone());
+//     for i in 0..2 {
+//         g = g.child(i);
+//         chain1.push(g.clone());
+//     }
+//     for i in 0..2 {
+//         g = g.child(i + 2);
+//         chain2.push(g.clone());
+//     }
+
+//     (chain1, chain2)
+
 fn build_forked_chain() -> (Vec<Header>, Vec<Header>) {
-    todo!("Exercise 6")
+    let mut chain1 = Vec::new();
+    let mut chain2 = Vec::new();
+
+    // Genesis block
+    let genesis = Header::genesis();
+    chain1.push(genesis.clone());
+    chain2.push(genesis.clone());
+
+    // Chain 1
+    let block1 = genesis.child(1);
+    chain1.push(block1.clone());
+    let block2 = block1.child(2);
+    chain1.push(block2);
+
+    // Chain 2 diverges here
+    let block3 = genesis.child(3);
+    chain2.push(block3.clone());
+    let block4 = block3.child(4);
+    chain2.push(block4);
+
+    (chain1, chain2)
+}
+
+    
 
     // Exercise 7: After you have completed this task, look at how its test is written below.
     // There is a critical thinking question for you there.
-}
+// }
 
 // To run these tests: `cargo test bc_2`
 #[test]
@@ -215,5 +314,12 @@ fn bc_2_verify_forked_chain() {
     // Question for students: I've only compared the last blocks here.
     // Is that enough? Is it possible that the two chains have the same final block,
     // but differ somewhere else?
+
+    // Answer: Comparing only the last blocks is not always sufficient to determine if two chains are completely different. 
+    // It is possible for two chains to have different paths but converge back to the same final block. To ensure that the 
+    // two chains are entirely different, we would need to compare each corresponding block in both chains, not just the last block.
+
     assert_ne!(c1.last(), c2.last());
+    // ./target/release/node-template --dev
+
 }
