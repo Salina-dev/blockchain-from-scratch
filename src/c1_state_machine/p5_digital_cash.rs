@@ -94,7 +94,62 @@ impl StateMachine for DigitalCashSystem {
     type Transition = CashTransaction;
 
     fn next_state(starting_state: &Self::State, t: &Self::Transition) -> Self::State {
-        todo!("Exercise 1")
+        let mut new_state = starting_state.clone();
+
+        match t {
+            CashTransaction::Mint { minter, amount } => {
+                new_state.add_bill(Bill {
+                    owner: *minter,
+                    amount: *amount,
+                    serial: starting_state.next_serial(),
+                });
+            }
+            CashTransaction::Transfer { spends, receives } => {
+                let total_spent: u64 = spends.iter().map(|b| b.amount).sum();
+                let total_received: u64 = receives.iter().map(|b| b.amount).sum();
+                
+                // Check for empty spends or receives
+                if spends.is_empty() || receives.is_empty() {
+                    return new_state;
+                }
+
+                // Check if total received is greater than total spent
+                if total_received > total_spent {
+                    return new_state;
+                }
+
+                // Ensure all spent bills exist and are owned by the spenders
+                for bill in spends {
+                    if !new_state.bills.contains(bill) {
+                        return new_state;
+                    }
+                }
+
+                // Remove spent bills from circulation
+                for bill in spends {
+                    new_state.bills.remove(bill);
+                }
+
+                // Check for duplicate serial numbers in receives
+                let mut serial_numbers = HashSet::new();
+                for bill in receives {
+                    if bill.amount == 0 || !serial_numbers.insert(bill.serial) {
+                        return new_state;
+                    }
+                    if bill.serial < starting_state.next_serial {
+                        return new_state;
+                    }
+                }
+
+                // Add received bills to circulation
+                for bill in receives {
+                    new_state.bills.insert(bill.clone());
+                    new_state.increment_serial();
+                }
+            }
+        }
+
+        new_state
     }
 }
 
