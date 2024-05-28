@@ -83,6 +83,27 @@ impl Header {
         }
 
         true
+
+        // if chain.is_empty() {
+        //     return true;
+        // }
+        // let child = &chain[0];
+        // // parent hash
+        // if hash(self) != child.parent {
+        //     return false;
+        // }
+        // // height
+        // if self.height + 1 != child.height {
+        //     return false;
+        // }
+        // // state and extrinsic
+        // if self.state + self.extrinsic != child.state {
+        //     return false;
+        // }
+        // // recurce to check the rest of the chain
+        // let rest_of_chain = &chain[1..];
+        // chain.verify_sub_chain(rest_of_chain)
+
     }
 }
 
@@ -138,10 +159,8 @@ fn build_an_invalid_chain() -> Vec<Header> {
 ///
 /// Side question: What is the fewest number of headers you could create to achieve this goal.
 /// 
-/// Side answer: To achieve the goal of creating two valid chains that diverge from the same genesis block, 
-/// five headers are necessary to ensure both chains have the required structure and validity.
-/// 
-// 
+/// Side answer: 2 (genesis block and one child block)
+
 
 // fn build_forked_chain() -> (Vec<Header>, Vec<Header>) {
 //     let mut chain1 = Vec::new();
@@ -315,9 +334,7 @@ fn bc_2_verify_forked_chain() {
     // Is that enough? Is it possible that the two chains have the same final block,
     // but differ somewhere else?
 
-    // Answer: Comparing only the last blocks is not always sufficient to determine if two chains are completely different. 
-    // It is possible for two chains to have different paths but converge back to the same final block. To ensure that the 
-    // two chains are entirely different, we would need to compare each corresponding block in both chains, not just the last block.
+    // Answer: it is enough. 
 
     assert_ne!(c1.last(), c2.last());
     // ./target/release/node-template --dev
