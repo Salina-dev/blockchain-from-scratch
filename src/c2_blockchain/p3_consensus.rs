@@ -37,12 +37,34 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     fn genesis() -> Self {
-        todo!("Exercise 1")
+        let new_genesis_header = Header {
+            parent: 0,
+            height: 0,
+            extrinsic: 0,
+            state: 0,
+            consensus_digest: 0,
+        };
+        new_genesis_header
     }
 
     /// Create and return a valid child header.
     fn child(&self, extrinsic: u64) -> Self {
-        todo!("Exercise 2")
+        let mut consensus_digest = 0;
+        let mut new_child_header;
+        loop {
+            new_child_header = Header {
+                parent: hash(self),
+                height: self.height + 1,
+                extrinsic,
+                state: self.state + extrinsic,
+                consensus_digest,
+            };
+            if hash(&new_child_header) < THRESHOLD {
+                break;
+            }
+            consensus_digest += 1;
+        }
+        new_child_header
     }
 
     /// Verify that all the given headers form a valid chain from this header to the tip.
@@ -50,7 +72,33 @@ impl Header {
     /// In addition to all the rules we had before, we now need to check that the block hash
     /// is below a specific threshold.
     fn verify_sub_chain(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 3")
+        let mut prev_hash = hash(self);
+        let mut prev_height = self.height;
+        let mut prev_header = self;
+
+        for header in chain {
+            if header.parent != prev_hash {
+                return false;
+            }
+            if header.height != prev_height + 1 {
+                return false;
+            }
+            if header.state != prev_header.state + header.extrinsic {
+                return false;
+            }
+            if hash(header) >= THRESHOLD {
+                return false;
+            }
+            if header.consensus_digest != prev_header.consensus_digest{
+				return false;
+			}
+
+            prev_hash = hash(header);
+            prev_height = header.height;
+            prev_header = header;
+        }
+
+        true
     }
 
     // After the blockchain ran for a while, a political rift formed in the community.
@@ -62,14 +110,64 @@ impl Header {
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE EVEN.
     fn verify_sub_chain_even(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 4")
+        let mut prev_header = self;
+
+		for header in chain{
+			if header.parent != hash(&prev_header){
+				return false;
+			}
+			if header.height != prev_header.height +1{
+				return false;
+			}
+			if header.state != prev_header.state + header.extrinsic{
+				return false;
+			}
+			if header.state % 2 != 0{
+				return false;
+			}
+			if hash(&header) >= THRESHOLD{
+				return false;
+			}
+			if header.consensus_digest != prev_header.consensus_digest{
+				return false;
+			}
+			
+			prev_header = header;
+		}
+		true
     }
 
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE ODD.
     fn verify_sub_chain_odd(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 5")
-    }
+        let mut prev_header = self;
+        
+        for header in chain{
+			if header.parent != hash(prev_header){
+				return false;
+			}
+			if header.height != prev_header.height +1{
+				return false;
+			}
+			if header.state != prev_header.state + header.extrinsic{
+				return false;
+			}
+			if header.state % 2 == 0{
+				return false;
+			}
+			if hash(&header) >= THRESHOLD{
+				return false;
+			}
+			if header.consensus_digest != prev_header.consensus_digest{
+				return false;
+			}
+			
+			prev_header = header;
+		}
+		
+		true
+	}
+    
 }
 
 /// Build and return two different chains with a common prefix.
@@ -89,7 +187,37 @@ impl Header {
 /// G -- 1 -- 2
 ///            \-- 3'-- 4'
 fn build_contentious_forked_chain() -> (Vec<Header>, Vec<Header>, Vec<Header>) {
-    todo!("Exercise 6")
+    let g = Header::genesis();
+
+	let mut common_chain = vec![g.clone()];
+	let mut last_header = g.clone();
+	for i in 0..1 {
+		let new_header = last_header.child(0); 
+		last_header = new_header.clone();
+        common_chain.push(new_header);
+	}
+
+	let mut even_header = last_header.clone();
+	let mut even_chain = vec![];
+	for i in 0..3{
+		let new_header = even_header.child(2); 
+		even_header = new_header.clone();
+        even_chain.push(new_header);
+	}
+
+	let mut odd_header = last_header.clone();
+	let mut odd_chain = vec![];
+	for i in 0..3{
+		let mut default_extrinsic = 2;
+		if odd_header.state % 2 == 0{
+			default_extrinsic = 1;
+		}
+		let new_header = odd_header.child(default_extrinsic); 
+		odd_header = new_header.clone();
+        odd_chain.push(new_header);
+	}
+
+	return (common_chain, even_chain, odd_chain);
 }
 
 // To run these tests: `cargo test bc_3`
